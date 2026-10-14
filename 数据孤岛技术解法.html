@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据孤岛的技术解法 · 分享</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-light.min.css">
+<style>
+:root{
+  --bg:#FAF9F6;--surface:#fff;--surface2:#FDFCFB;--border:#E8E4DE;--border2:#F0EDE8;
+  --ink:#1a1a1a;--muted:#6B6560;--faint:#B0AAA4;
+  --terra:#D97757;--sage:#5B8A72;--plum:#8B6F8A;--slate:#6B7280;--rose:#C96464;
+  --terra-bg:#FFF5F0;--sage-bg:#F5F8F6;--plum-bg:#F5F3F8;
+  --radius:14px;--sidebar-w:290px;
+  --mono:'SF Mono',ui-monospace,'JetBrains Mono',Menlo,Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:30px}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--ink);line-height:1.75;-webkit-font-smoothing:antialiased}
+#progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:200;background:linear-gradient(90deg,var(--terra),var(--plum),var(--sage));box-shadow:0 0 10px rgba(217,119,87,.4);transition:width .08s linear}
+.layout{display:flex;max-width:1320px;margin:0 auto;align-items:flex-start}
+.sidebar{position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex-shrink:0;padding:30px 14px 40px 30px;overflow-y:auto;border-right:1px solid var(--border);background:linear-gradient(180deg,#FBFAF8,#FAF9F6)}
+.sidebar::-webkit-scrollbar{width:6px}.sidebar::-webkit-scrollbar-thumb{background:#E0DCD6;border-radius:3px}
+.side-brand{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.pulse{width:9px;height:9px;border-radius:50%;background:var(--terra);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
+.side-brand b{font-size:.82rem;font-weight:700;letter-spacing:.01em}
+.side-sub{font-size:.66rem;color:var(--faint);margin:0 0 20px 18px;letter-spacing:.02em}
+.toc-title{font-size:.64rem;font-weight:700;letter-spacing:.14em;color:var(--faint);text-transform:uppercase;margin:0 0 10px 6px}
+nav#toc a{display:block;padding:6px 12px;margin:1px 0;font-size:.78rem;color:var(--muted);text-decoration:none;border-radius:8px;border-left:2px solid transparent;transition:all .18s;line-height:1.4}
+nav#toc a.h3{padding-left:26px;font-size:.73rem;color:#8a847e}
+nav#toc a:hover{background:#F3F0EB;color:var(--ink)}
+nav#toc a.active{background:var(--terra-bg);color:var(--terra);border-left-color:var(--terra);font-weight:600}
+.main{flex:1;min-width:0;padding:0 52px 140px}
+.hero{position:relative;margin:0 0 40px;padding:60px 46px 46px;overflow:hidden;background:radial-gradient(1100px 420px at 8% -25%,#FBE8DF 0%,transparent 58%),radial-gradient(820px 380px at 95% -10%,#EBE4EE 0%,transparent 55%),linear-gradient(180deg,#fff,#FAF9F6);border-bottom:1px solid var(--border)}
+.hero .dot{display:inline-flex;align-items:center;gap:8px;font-size:.72rem;font-weight:600;color:var(--terra);background:var(--terra-bg);border:1px solid #F2D9CD;padding:4px 12px;border-radius:999px;margin-bottom:18px}
+.hero h1{font-size:2.55rem;font-weight:800;letter-spacing:-.035em;line-height:1.12;background:linear-gradient(100deg,#1a1a1a 25%,var(--terra) 62%,var(--plum));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hero .lead{font-size:1.02rem;color:var(--muted);margin-top:14px;max-width:680px;line-height:1.6}
+.hero .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.hero .chip{font-size:.72rem;color:var(--muted);background:#fff;border:1px solid var(--border);padding:5px 12px;border-radius:8px}
+.hero .chip b{color:var(--ink);font-weight:600}
+.content{max-width:880px}
+.content h2{font-size:1.5rem;font-weight:750;letter-spacing:-.02em;margin:52px 0 16px;padding-bottom:10px;border-bottom:1px solid var(--border);scroll-margin-top:24px}
+.content h2:first-of-type{margin-top:8px}
+.content h3{font-size:1.12rem;font-weight:700;margin:30px 0 10px;color:#2a2a2a;scroll-margin-top:24px}
+.content h2 .num{display:inline-block;min-width:1.5em;color:var(--terra);font-weight:800;margin-right:.3em}
+.content p{margin:12px 0;color:#2d2a27}
+.content ul,.content ol{margin:12px 0 12px 2px;padding-left:22px}
+.content li{margin:6px 0;color:#2d2a27}
+.content strong{font-weight:700;color:var(--ink)}
+.content a{color:var(--terra);text-decoration:none;border-bottom:1px solid #EBCBBE}
+.content a:hover{border-bottom-color:var(--terra)}
+.content hr{border:none;border-top:1px dashed var(--border);margin:40px 0}
+.content blockquote{margin:18px 0;padding:14px 20px;background:linear-gradient(180deg,var(--surface2),#fff);border-left:3px solid var(--sage);border-radius:0 10px 10px 0;color:#3a362f;box-shadow:0 1px 3px rgba(0,0,0,.03)}
+.content blockquote p{margin:4px 0}
+.content blockquote strong{color:var(--sage)}
+/* tables */
+.content table{border-collapse:collapse;width:100%;margin:20px 0;font-size:.86rem;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.03)}
+.content thead th{background:linear-gradient(180deg,#F7F4EF,#F2EEE8);color:var(--ink);font-weight:700;text-align:left;padding:11px 14px;border-bottom:1px solid var(--border);font-size:.82rem}
+.content tbody td{padding:10px 14px;border-bottom:1px solid var(--border2);color:#39352f;vertical-align:top}
+.content tbody tr:last-child td{border-bottom:none}
+.content tbody tr:hover{background:#FBFAF8}
+.content td code,.content p code,.content li code,.content h3 code{font-family:var(--mono);font-size:.84em;background:#F3EFEA;color:#9a4d33;padding:1.5px 6px;border-radius:5px;border:1px solid #EAE4DC}
+/* code blocks */
+.content pre{margin:18px 0;background:#FBFAF8;border:1px solid var(--border);border-radius:12px;overflow:auto;position:relative;box-shadow:0 1px 3px rgba(0,0,0,.03)}
+.content pre code{display:block;padding:18px 20px;font-family:var(--mono);font-size:.82rem;line-height:1.6;background:none;border:none;color:#2d2a27}
+.content pre::-webkit-scrollbar{height:7px}.content pre::-webkit-scrollbar-thumb{background:#E0DCD6;border-radius:4px}
+.code-lang{position:absolute;top:0;right:0;font-family:var(--mono);font-size:.64rem;color:var(--faint);background:#F3EFEA;padding:3px 10px;border-radius:0 11px 0 8px;letter-spacing:.05em;text-transform:uppercase}
+/* mermaid */
+.mermaid-card{margin:22px 0;padding:20px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);overflow-x:auto;box-shadow:0 2px 10px rgba(0,0,0,.04);transition:box-shadow .25s,transform .25s}
+.mermaid-card:hover{box-shadow:0 8px 28px rgba(0,0,0,.08)}
+.mermaid{display:flex;justify-content:center;min-width:min-content}
+.mermaid svg{max-width:100%;height:auto}
+/* reveal animation */
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .6s cubic-bezier(.2,.6,.2,1),transform .6s cubic-bezier(.2,.6,.2,1)}
+.reveal.in{opacity:1;transform:none}
+/* back to top + mobile */
+#top{position:fixed;right:26px;bottom:26px;width:44px;height:44px;border-radius:50%;background:var(--ink);color:#fff;border:none;cursor:pointer;font-size:1.1rem;opacity:0;pointer-events:none;transition:opacity .3s,transform .2s;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:150}
+#top.show{opacity:.9;pointer-events:auto}#top:hover{transform:translateY(-3px);opacity:1}
+#menu{display:none}
+.footer-note{margin-top:60px;padding-top:24px;border-top:1px solid var(--border);color:var(--faint);font-size:.76rem;font-style:italic}
+@media(max-width:980px){
+  .sidebar{position:fixed;z-index:120;transform:translateX(-105%);transition:transform .3s;box-shadow:4px 0 30px rgba(0,0,0,.12);background:#FBFAF8}
+  .sidebar.open{transform:none}
+  .main{padding:0 22px 120px}.hero{padding:46px 22px 34px}.hero h1{font-size:1.9rem}
+  #menu{display:flex;position:fixed;top:16px;left:16px;z-index:130;width:42px;height:42px;align-items:center;justify-content:center;background:var(--ink);color:#fff;border:none;border-radius:10px;font-size:1.1rem;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+}
+/*CSS3*/
+
+
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<button id="menu" aria-label="目录">☰</button>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand"><span class="pulse"></span><b>数据孤岛的技术解法</b></div>
+    <p class="side-sub">企业级 Agent 如何打通软件孤岛</p>
+    <p class="toc-title">目录</p>
+    <nav id="toc"></nav>
+  </aside>
+  <main class="main">
+    <header class="hero">
+      <span class="dot"><span class="pulse"></span>技术分享 · 学习笔记</span>
+      <h1>数据孤岛的技术解法</h1>
+      <p class="lead">从千问办公电商版，看企业级 Agent 如何在技术与逻辑上「打通」20 多年的软件孤岛。</p>
+      <div class="chips">
+        <span class="chip"><b>背景</b> 《财经》吴俊宇 · 2026-10</span>
+        <span class="chip"><b>视角</b> 产品经理视角技术解读</span>
+        <span class="chip"><b>关键词</b> MCP · 联邦查询 · 上下文工程</span>
+      </div>
+    </header>
+    <article class="content" id="content"></article>
+    <p class="footer-note">本文档为行业分享学习资料，供参考交流。</p>
+  </main>
+</div>
+<button id="top" aria-label="返回顶部">↑</button>
+
+<script id="md" type="text/plain">
+## 0. TL;DR（一分钟版）
+
+数据孤岛 = **两道墙**：数据「够不着」(接入壁垒) + 够着了也「对不齐」(语义壁垒)。
+
+企业级 Agent 的解法是四层架构：
+
+| 层 | 解决什么 | 核心技术 |
+|----|---------|---------|
+| ① 接入层 | 够不着 → N×M 集成爆炸 | MCP 协议 + CLI 适配，坍缩成 N+M |
+| ② 认证层 | 凭证不敢集中 | 联邦式凭证，每个连接器自持 |
+| ③ 数据层 | 搬数据太重太滞后 | 按需联邦查询，不建数仓 |
+| ④ 语义层 | 对不齐（真正的护城河） | 实体对齐 + 上下文工程 + 行业理解 |
+
+**一句话**：连接是入场券（谁都能做），**不搬数据的联邦整合 + 运行时语义对齐**才是壁垒。
+
+---
+
+## 1. 问题定义：数据孤岛到底是什么
+
+### 1.1 一个真实场景
+
+北京精品咖啡品牌**捌比特**：17 人，在十余个电商平台开店。其软件分布：
+
+```
+订单/库存   → 聚水潭 ERP
+店铺/订单   → 千牛（淘宝天猫）
+流量/转化   → 生意参谋
+营销投放    → 阿里妈妈·万相台
+私域/会员   → 有赞（微信生态）
+跨境选品    → FastMoss(TikTok) / LinkFox(亚马逊)
+财务核算    → 钉钉智能财务
+```
+
+每个系统：**独立后台、独立账号、独立数据模型**。想回答"某款咖啡在抖音渠道是否盈利"，过去要运营 + 财务分别登录、各自导表、人工拼表，几天出一个数。
+
+### 1.2 孤岛的技术成因（为什么天然会割裂）
+
+1. **组织边界 → 系统边界**：工具由不同厂商、不同时期为不同环节而建，各自闭环，没有互通的动机。
+2. **缺乏统一标识**：同一笔订单在千牛、聚水潭、钉钉财务里是**三个不同的 ID**，没有全局主键。
+3. **异构 schema**：字段命名、口径、粒度、时区、币种各不相同。
+4. **接口不开放 / 形态不一**：有的有 REST API，有的只有网页后台，有的只有导出 Excel，有的只有 CLI。
+5. **数据主权与安全**：各系统不愿把原始数据交出去，凭证也不敢集中。
+
+### 1.3 把问题拆成两道墙
+
+| | 墙 | 本质 | 难度 |
+|--|----|------|------|
+| 第一道 | **够不着（Access）** | 数据锁在各后台，接口异构、要逐个登录 | 中（正在变成水电煤） |
+| 第二道 | **对不齐（Semantics）** | ID 对不上、口径不统一、缺行业语义 | 高（真正的壁垒） |
+
+> **PM 关键认知**：打通 ≠ 推倒第一道墙。能连上只是开始，**让十几个源的数据在语义上对齐、可推理**，才是价值所在。
+
+## 2. 为什么老方案都失败了
+
+三条传统路径，各自撞墙：
+
+### 2.1 数据仓库 / 数据中台（ETL 搬运）
+把所有工具的数据抽取、转换、加载到一个中心仓库，统一建模后分析。
+
+- ❌ **重**：需要前置 schema 建模、数据管道运维，中小商家玩不起。
+- ❌ **滞后**：ETL 有延迟，等你建完模型，源端 schema 已漂移、数据已过期。
+- ❌ **治理成本高**：权限、血缘、质量都要重新治理一遍。
+
+### 2.2 点对点集成 / iPaaS（Zapier 式）
+每两个系统之间写一个定制连接器。
+
+- ❌ **N×M 爆炸**：N 个工具、M 个消费方 → N×M 个集成，任一方改接口全链路崩。
+- ❌ **脆**：靠硬编码字段映射，无语义理解，换个场景就得重写。
+
+### 2.3 直接把数据丢给通用 Agent
+捌比特真试过（"养龙虾"、Codex 等）。
+
+- ❌ **数据不全**：人工下载的数据是残缺快照，Agent 看不到全貌。
+- ❌ **不懂行业**：通用模型缺电商经营语义，给不出专业判断。
+- ❌ **不稳定**："养龙虾时一半时间在解决宕机"；依赖外网的工具做企业级任务不够稳。
+
+> **一句话**：老路要么太重（数仓），要么太脆（点对点），要么没脑子（通用 Agent 直接喂）。
+
+---
+
+## 3. 新范式：两个逻辑反转
+
+企业级 Agent 的解法，核心是两个范式级的反转：
+
+```
+反转一（数据流向）：  先搬运、再统一   →   就地取数、运行时整合
+反转二（适配方向）：  人去适配十几个工具 →  工具标准化接入，Agent 统一调度
+```
+
+一句钩子：**不再把数据搬到一起，而是把智能体放到数据旁边，用时现查、现场对齐。**
+
+## 4. 技术架构总览
+
+```mermaid
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'Inter,sans-serif','lineColor':'#9c9690','clusterBkg':'#FDFCFB','clusterBorder':'#E8E4DE','fontSize':'13px'},'flowchart':{'curve':'basis','nodeSpacing':38,'rankSpacing':65}}}%%
+flowchart LR
+  USER(["🧑‍💼 电商商家<br/>自然语言对话框"]):::user
+  subgraph SILOS["🏝️ 数据孤岛 · 源系统（数据不搬家）"]
+    direction TB
+    A1["千牛<br/>店铺·订单"]:::silo
+    A2["生意参谋<br/>流量·转化"]:::silo
+    A3["万相台<br/>营销投放"]:::silo
+    A4["有赞<br/>私域·会员"]:::silo
+    A5["FastMoss / LinkFox<br/>跨境选品"]:::silo
+    A6["聚水潭 ERP<br/>进销存"]:::silo
+    A7["钉钉智能财务<br/>财务核算"]:::silo
+  end
+  subgraph L12["① 接入层 + ② 认证层"]
+    direction TB
+    MCP["MCP Server 群<br/>tools · resources · prompts"]:::conn
+    CLI["CLI 适配器<br/>驱动无 API 的老工具"]:::conn
+    AUTH["联邦式凭证<br/>各连接器自持 OAuth/Key"]:::conn
+  end
+  subgraph L3["③ 数据层 · 联邦查询"]
+    direction TB
+    FED["按需实时取数<br/>query pushdown + 缓存TTL"]:::hub
+    ORCH["编排器 Orchestrator<br/>plan · act · observe"]:::hub
+  end
+  subgraph L4["④ 语义层 · 护城河"]
+    direction TB
+    CTX["企业上下文 Enterprise Context<br/>实体对齐 · 压缩 · 结构化 · 动态更新"]:::ctx
+    BRAIN["智能内核<br/>专属模型 + Skill + 专家套件"]:::hub
+  end
+  subgraph ECO["🔌 外部生态"]
+    direction TB
+    E1["钉钉 · 飞书 · 企业微信"]:::eco
+    E2["Salesforce · SAP"]:::eco
+    E3["ISV 开放平台"]:::eco
+  end
+  subgraph OUT["📈 经营产出"]
+    direction TB
+    O1["选品调研 · 销量×10"]:::out
+    O2["跨渠道净毛利 · 砍亏损渠道"]:::out
+    O3["快速开店 · &lt;1周"]:::out
+    O4["多店自动巡检"]:::out
+  end
+  SILOS -- "标准化接入<br/>N×M → N+M" --> L12
+  ECO -. "往上协同 / 往下垂直软件" .-> L12
+  L12 -- "不搬数据 · 实时" --> L3
+  L3 --> L4
+  L4 -- "可推理的上下文" --> ORCH
+  USER -- "自然语言需求" --> ORCH
+  ORCH -- "跨工具结论" --> OUT
+  OUT -. "决策反馈" .-> USER
+  classDef silo fill:#FFF5F0,stroke:#D97757,stroke-width:1.3px,color:#1a1a1a;
+  classDef conn fill:#F5F3F8,stroke:#8B6F8A,stroke-width:1.3px,color:#1a1a1a;
+  classDef hub fill:#F5F8F6,stroke:#5B8A72,stroke-width:1.3px,color:#1a1a1a;
+  classDef ctx fill:#EFEAF2,stroke:#8B6F8A,stroke-width:2px,color:#1a1a1a;
+  classDef eco fill:#F7F6F4,stroke:#6B7280,stroke-width:1.3px,color:#1a1a1a;
+  classDef out fill:#F5F8F6,stroke:#5B8A72,stroke-width:1.3px,color:#1a1a1a;
+  classDef user fill:#FFEEE6,stroke:#D97757,stroke-width:2px,color:#1a1a1a;
+```
+
+> 下面逐层拆解每一层**具体怎么实现**。
+
+## 5. 逐层技术实现
+
+### 5.1 接入层：MCP 协议 —— 把 N×M 变成 N+M
+
+**问题**：N 个工具、M 个消费方，点对点集成是 N×M。
+
+**解法**：引入一层标准协议 **MCP (Model Context Protocol)**，类比 **AI 界的 USB-C / 编辑器界的 LSP**。每个工具只实现一个 MCP Server，Agent 只说一种协议语言 → 集成复杂度坍缩为 **N + M**。
+
+MCP Server 向 Agent 暴露三类原语（基于 JSON-RPC 2.0）：
+
+| 原语 | 含义 | 电商例子 |
+|------|------|---------|
+| `tools` | Agent 可调用的函数（带 JSON Schema 入参） | `shengyi.query_traffic(shop_id, date_range)` |
+| `resources` | Agent 可读取的数据资源（URI 寻址） | `jushuitan://orders/2026-10` |
+| `prompts` | 预置的任务模板 | "生成分渠道利润报表" |
+
+一个 `tool` 定义示意（Server 声明自己能干什么）：
+
+```json
+{
+  "name": "shengyi_query_sales",
+  "description": "查询生意参谋店铺销售与转化数据",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "shop_id":    { "type": "string" },
+      "date_range": { "type": "string", "description": "如 2026-09-01~2026-09-30" },
+      "metrics":    { "type": "array", "items": { "type": "string" } }
+    },
+    "required": ["shop_id", "date_range"]
+  }
+}
+```
+
+Agent 发起调用（JSON-RPC）：
+
+```json
+{ "jsonrpc": "2.0", "id": 7, "method": "tools/call",
+  "params": { "name": "shengyi_query_sales",
+    "arguments": { "shop_id": "A123", "date_range": "2026-09", "metrics": ["gmv","cvr"] } } }
+```
+
+**对没有正经 API 的老工具** → 走 **CLI 适配**：Agent 生成命令行、执行、解析 stdout，把命令行当"万能转接头"。文章里"开放 MCP、CLI 接口"正是这两条路。
+
+下图是这一层最核心的拓扑变化 —— **从点对点的 N×M，坍缩成以协议为中心的 N+M**：
+
+```mermaid
+%%{init:{'theme':'base','themeVariables':{'fontFamily':'Inter,sans-serif','lineColor':'#c0968c'}}}%%
+flowchart LR
+  subgraph B["❌ 点对点 · N×M（谁改接口都崩）"]
+    direction LR
+    bt1["千牛"]:::silo --- bs1["分析"]:::hub
+    bt1 --- bs2["报表"]:::hub
+    bt1 --- bs3["财务"]:::hub
+    bt2["生意参谋"]:::silo --- bs1
+    bt2 --- bs2
+    bt2 --- bs3
+    bt3["聚水潭"]:::silo --- bs1
+    bt3 --- bs2
+    bt3 --- bs3
+  end
+  subgraph A["✅ 协议居中 · N+M（MCP 标准接入）"]
+    direction LR
+    at1["千牛"]:::silo --> H{{"MCP 协议"}}:::conn
+    at2["生意参谋"]:::silo --> H
+    at3["聚水潭"]:::silo --> H
+    H --> ag["Agent"]:::hub
+  end
+  classDef silo fill:#FFF5F0,stroke:#D97757,color:#1a1a1a;
+  classDef hub fill:#F5F8F6,stroke:#5B8A72,color:#1a1a1a;
+  classDef conn fill:#F5F3F8,stroke:#8B6F8A,stroke-width:2px,color:#1a1a1a;
+```
+
+### 5.2 认证层：联邦式凭证，墙不拆、开标准门
+
+传统"打通"卡在：要把 10 个系统的账号密码/token 全塞进一个中心库 → 安全合规直接劝退。
+
+**解法**：凭证**下沉到每个连接器自持**。
+- 每个 MCP Server / CLI 适配器各自管理自己的 OAuth token / API Key / Session。
+- Agent 只发起调用，**不碰、不汇总**凭证。
+- 好处：数据主权留在源系统，单点泄露面小，接入一个新工具不影响已有凭证体系。
+
+> 逻辑上：孤岛的"墙"不用拆，只在墙上开一扇**标准化的门**。
+
+### 5.3 数据层：按需联邦查询，而不是 ETL 建数仓
+
+这是与"数据中台"路线最大的分歧，也是关键架构选择：
+
+| 维度 | 传统数仓（ETL） | Agent 联邦查询 |
+|------|----------------|---------------|
+| 数据位置 | 抽取到中心仓库 | **留在源系统** |
+| 时效 | 批处理，滞后 | **运行时实时拉取** |
+| 建模 | 前置、全量建模 | 任务驱动、按需取子集 |
+| 成本 | 重（管道+存储+治理） | 轻（用时才查） |
+| 适用 | 固定报表 | **开放式、临时性经营问题** |
+
+**实现要点**：
+- Agent 根据任务**只拉当下需要的那部分数据**（query pushdown：能让源端算的尽量在源端算，减少回传）。
+- 对慢接口/高频访问加**缓存层 + TTL**（文章里规则查询"30min cache"就是这类思路）。
+- 调用需**幂等 + 重试**，避免对源系统重复下单/重复写。
+
+> 范式：从"**先搬运再统一**"变成"**用时现查、就地整合**"。读的是实时数据，不养滞后副本。
+
+### 5.4 语义层：真正难的部分（第二道墙）
+
+接上了、能读了，拿到的还是**异构、割裂、无语义**的数据。这一层做三件技术活：
+
+**(a) 实体对齐 / 口径统一（Entity Resolution）**
+同一笔订单在千牛、聚水潭、钉钉财务里是三个 ID。要建立跨系统映射，把同一个 **SKU / 订单 / 客户** 认成一个实体；并统一"净毛利""扣点""履约成本"等**口径**。
+- 技术手段：主键映射表、模糊匹配（名称/时间/金额三元组）、规则 + 模型辅助消歧。
+- 这一步决定了后续分析对不对——是语义胶水。
+
+**(b) 上下文工程（Enterprise Context）**
+文章原话："把分散在群聊、文档、知识库、业务系统里的信息**压缩、结构化、动态更新**。"
+拆成一条流水线：
+
+```
+检索(retrieve) → 归一(normalize) → 实体对齐(resolve)
+   → 压缩(compress) → 结构化(structure) → 动态更新(refresh)
+```
+
+- **压缩是硬约束**：LLM 上下文窗口有限、token 有成本，**不可能把 10 个工具的原始表全塞进去**，必须蒸馏成模型能推理的精简结构（摘要、聚合、Schema 化）。
+- **动态更新**：上下文带时效，过期要重取，保证"信得过"。
+
+**(c) 行业理解：Skill + 专家套件 + 专属模型**
+把"数据"变成"判断"：
+- **Skill（技能）**：固化的工作流 = `参数化 Prompt + 工具调用序列 + 口径定义`，可复用。捌比特自建的"选品调研 Skill"、刘祥龙两个月搭的 100+ 个 Skill 都是这个。
+- **专家套件**：行业"最后一公里"的打包能力。
+- **专属模型**：千问为其训练的优化版本，内置电商经营语义，知道"日晒 vs 水洗 要先做归因""分渠道净毛利怎么算"。
+
+## 6. 端到端走一遍：以"分渠道净毛利核算"为例
+
+用户在对话框输入："**算一下 10 月各渠道的净毛利，哪个渠道其实不赚钱？**"
+
+Agent 跑的是一个 **plan–act–observe 编排循环**：
+
+```mermaid
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'Inter,sans-serif','actorBkg':'#FFF5F0','actorBorder':'#D97757','actorTextColor':'#1a1a1a','noteBkg':'#EFEAF2','noteBorderColor':'#8B6F8A','signalColor':'#8B8680','signalTextColor':'#1a1a1a','labelBoxBkgColor':'#F5F8F6','labelBoxBorderColor':'#5B8A72'}}}%%
+sequenceDiagram
+    autonumber
+    actor U as 🧑‍💼 商家
+    participant O as 编排器 Agent
+    participant C as 连接器 MCP/CLI
+    participant X as 企业上下文
+    participant M as 模型 + Skill
+    U->>O: 算 10 月各渠道净毛利，哪个其实不赚钱？
+    activate O
+    O->>M: 任务拆解（命中「利润核算」Skill）
+    M-->>O: 所需：订单/费用/库存/扣点规则 + 口径
+    rect rgb(245, 248, 246)
+    note over O,C: ③ 数据层 — 并行、按需、就地取数（数据不搬家）
+    O->>C: 并行拉取 生意参谋 / 聚水潭 / 钉钉财务 / 各平台扣点
+    activate C
+    C-->>O: 异构原始数据（ID、口径不一致）
+    deactivate C
+    end
+    rect rgb(239, 234, 242)
+    note over O,X: ④ 语义层 — 实体对齐 + 压缩结构化
+    O->>X: 统一订单/SKU，按口径归一
+    X-->>O: 按渠道归集的结构化上下文
+    end
+    O->>M: 按口径算：毛利 − 销售费 − 履约成本 = 净毛利
+    M-->>O: 分渠道净毛利 + 异常提示
+    O-->>U: 结论：某渠道「下架比上架挣钱」→ 建议收缩
+    deactivate O
+```
+
+对应的编排伪代码：
+
+```python
+def run(task):
+    plan = model.plan(task, skills=registry)      # 命中"利润核算"Skill
+    data = {}
+    for call in plan.tool_calls:                  # 并行、按需、就地取数
+        data[call.id] = connectors.invoke(call)   # MCP/CLI, 各自鉴权
+    ctx = context_engine.build(data,              # 实体对齐+压缩+结构化
+             entity_keys=["order_id","sku"],
+             caliber=plan.caliber)                # 统一口径
+    while not plan.done():                        # observe→act 循环
+        step = model.reason(ctx, plan.state)
+        if step.need_more_data:
+            data.update(connectors.invoke(step.call))
+            ctx = context_engine.update(ctx, data)
+        else:
+            plan.advance(step.result)
+    return plan.answer                            # 分渠道净毛利 + 建议
+```
+
+**关键点**：数据全程**留在源系统**，Agent 只拉需要的子集；对齐和计算发生在**运行时**；口径由"经营者 + 熟悉平台规则的财务"一起确定后**固化进 Skill**，下次直接复用。
+
+## 7. 关键技术难点与权衡
+
+| 难点 | 本质 | 典型取舍 |
+|------|------|---------|
+| **上下文窗口 vs 数据量** | 塞不下十几张原始表 | 压缩/聚合 → 精度 vs 成本的平衡 |
+| **实时性 vs 稳定性** | 源接口慢/限流 | 缓存+TTL；关键数据实时，长尾数据缓存 |
+| **幂等与副作用** | 写操作可能重复执行 | 幂等键 + 人工确认高风险动作 |
+| **口径一致性** | 同一指标多种算法 | 口径固化进 Skill，人机共定 |
+| **实体对齐错误** | ID 匹配错 → 结论错 | 规则+模型消歧，低置信度回退人工 |
+| **内网 vs 外网** | 企业数据不出内网 | 捌比特明确"希望任务在内网运行"→ 私有化部署诉求 |
+| **通用 vs 行业** | 既要通用又要懂行 | 平台做通用，Skill/专家套件补"最后一公里" |
+
+> 文章里捌比特的做法印证了这些取舍：核算先人工定口径再固化、按月跑（必要时按周）、对结果"先做归因再决策"——**AI 给输入，人做决策**。
+
+---
+
+## 8. 为什么这是对的：商业逻辑与护城河
+
+- **连接是入场券，不是壁垒**。文章里软件老兵点破：如今厂商都愿意开放接口，软件生态比三四年前开放得多，"connect all tools"谁都能做。
+- **壁垒在第二道墙**：不搬数据的联邦整合 + 实体对齐 + 行业理解。
+- **价值从"证明降本"走进"直接赚钱"**：
+  - 选品：数据驱动做出"瑰夏夏"，销量 ×10
+  - 算账：发现"下架比上架挣钱"，主动砍渠道
+  - 开店：先验证后生产，<1 周开新店（过去 30–45 天）
+- **黏性从模型转向工具/工作流**：704 份问卷中，固定用一个 Agent 工具、模型可换的占 29.3% > 固定用一个模型、工具可换的 20.0%。**沉淀的连接器 + 技能 + 工作流越多，迁移成本越高**——这才是企业级 Agent 的护城河。
+
+> 收尾：打通数据孤岛，本质不是"把管子接上"，而是"接上之后，还能把水变成能喝的、且知道什么时候该喝哪杯"。
+
+## 术语表
+
+| 术语 | 说明 |
+|------|------|
+| **MCP** | Model Context Protocol，Agent 与工具间的标准协议，基于 JSON-RPC，暴露 tools/resources/prompts |
+| **CLI 适配** | 对无 API 的工具，Agent 生成命令行、解析 stdout 来调用 |
+| **联邦查询** | 数据留在源系统，按需实时拉取，不做 ETL 搬运 |
+| **实体对齐** | 跨系统把同一 SKU/订单/客户映射为一个实体 |
+| **上下文工程** | 检索→归一→对齐→压缩→结构化→动态更新，产出模型可用上下文 |
+| **Skill** | 固化的工作流：参数化 Prompt + 工具调用序列 + 口径定义 |
+| **plan-act-observe** | Agent 的编排循环：拆解→调用→观察→再决策 |
+
+## 参考
+
+- 《财经》吴俊宇《千问办公，正在打通电商 20 多年的软件孤岛》(2026-10)
+- 配套架构图：[architecture.html](architecture.html)
+</script>
+<script type="module">
+import { marked } from 'https://cdn.jsdelivr.net/npm/marked@12/lib/marked.esm.js';
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+import hljs from 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/es/highlight.min.js';
+
+const content = document.getElementById('content');
+content.innerHTML = marked.parse(document.getElementById('md').textContent, { gfm:true });
+
+// mermaid: convert fenced blocks into cards (before highlighting)
+content.querySelectorAll('pre > code.language-mermaid').forEach(code => {
+  const card = document.createElement('div'); card.className = 'mermaid-card';
+  const div = document.createElement('div'); div.className = 'mermaid';
+  div.textContent = code.textContent;
+  card.appendChild(div); code.parentElement.replaceWith(card);
+});
+
+// syntax highlight remaining code + language badge
+content.querySelectorAll('pre > code').forEach(code => {
+  const cls = [...code.classList].find(c => c.startsWith('language-'));
+  const lang = cls ? cls.replace('language-','') : '';
+  if (lang) { try { hljs.highlightElement(code); } catch(e){}
+    const b = document.createElement('span'); b.className='code-lang'; b.textContent=lang;
+    code.parentElement.appendChild(b); }
+});
+
+// render mermaid
+mermaid.initialize({ startOnLoad:false, securityLevel:'loose', theme:'base' });
+try { await mermaid.run({ nodes: content.querySelectorAll('.mermaid') }); } catch(e){ console.warn(e); }
+
+// build TOC
+const toc = document.getElementById('toc');
+const heads = [...content.querySelectorAll('h2, h3')];
+heads.forEach((h,i) => {
+  h.id = 'sec-'+i;
+  const a = document.createElement('a');
+  a.href = '#sec-'+i; a.textContent = h.textContent;
+  a.className = h.tagName === 'H3' ? 'h3' : 'h2';
+  toc.appendChild(a);
+});
+// scroll-spy
+const links = [...toc.querySelectorAll('a')];
+const byId = {}; links.forEach(a => byId[a.getAttribute('href').slice(1)] = a);
+const spy = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const a = byId[e.target.id];
+      if (a) { a.classList.add('active'); a.scrollIntoView({ block:'nearest' }); }
+    }
+  });
+}, { rootMargin:'0px 0px -78% 0px', threshold:0 });
+heads.forEach(h => spy.observe(h));
+
+// progress bar + back-to-top
+const prog = document.getElementById('progress'), topBtn = document.getElementById('top');
+const onScroll = () => {
+  const y = window.scrollY, h = document.documentElement.scrollHeight - window.innerHeight;
+  prog.style.width = (h > 0 ? y / h * 100 : 0) + '%';
+  topBtn.classList.toggle('show', y > 500);
+};
+window.addEventListener('scroll', onScroll, { passive:true }); onScroll();
+topBtn.onclick = () => window.scrollTo({ top:0, behavior:'smooth' });
+
+// mobile sidebar
+const menu = document.getElementById('menu'), sidebar = document.getElementById('sidebar');
+menu.onclick = () => sidebar.classList.toggle('open');
+toc.addEventListener('click', () => { if (window.innerWidth <= 980) sidebar.classList.remove('open'); });
+
+// reveal on scroll
+const kids = [...content.children];
+kids.forEach(k => k.classList.add('reveal'));
+const rev = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) { e.target.classList.add('in'); rev.unobserve(e.target); }
+}), { threshold:0.06 });
+kids.forEach(k => rev.observe(k));
+</script>
+</body>
+</html>
